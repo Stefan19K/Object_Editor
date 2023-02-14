@@ -4,6 +4,10 @@
 #include "core/engine.h"
 #include "components/simple_scene.h"
 
+#if defined(WITH_LAB_M1)
+#   include "source_code/Editor.h"
+#endif
+
 #ifdef _WIN32
     PREFER_DISCRETE_GPU_NVIDIA;
     PREFER_DISCRETE_GPU_AMD;
@@ -32,7 +36,7 @@ int main(int argc, char **argv)
     (void)Engine::Init(wp);
 
     // Create a new 3D world and start running it
-    World *world = new m1::Tema3();
+    World *world = new ed::Editor();
 
     world->Init();
     world->Run();
