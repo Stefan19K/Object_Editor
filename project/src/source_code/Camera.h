@@ -123,5 +123,6 @@ namespace implemented
         glm::vec3 forward;
         glm::vec3 right;
         glm::vec3 up;
+        glm::mat4 projectionMatrix;
     };
 }

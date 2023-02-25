@@ -2,6 +2,7 @@
 
 #include "components/simple_scene.h"
 #include "source_code/Camera.h"
+#include "Macros.h"
 
 
 namespace ed
@@ -9,6 +10,17 @@ namespace ed
     class Editor : public gfxc::SimpleScene
     {
     public:
+        struct ViewportArea
+        {
+            ViewportArea() : x(0), y(0), width(1), height(1) {}
+            ViewportArea(int x, int y, int width, int height)
+                : x(x), y(y), width(width), height(height) {}
+            int x;
+            int y;
+            int width;
+            int height;
+        };
+
         Editor();
         ~Editor();
 
@@ -19,7 +31,18 @@ namespace ed
         void Update(float deltaTimeSeconds) override;
         void FrameEnd() override;
 
-        void RenderMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix) override;
+        void RenderMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, implemented::Camera* cam);
+        void RenderSimpleMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, Texture2D* texture1, Texture2D* texture2 = NULL);
+        Texture2D* Editor::CreateTextureColor(unsigned int width, unsigned int height, glm::vec3 color);
+        Texture2D* CreateRandomTexture(unsigned int width, unsigned int height);
+
+        void CreateCameras();
+        void CreateTextures();
+        void CreateObjects();
+        void CreateShaders();
+
+        void RenderMainScene();
+        void RenderButtonMenu();
 
         void OnInputUpdate(float deltaTime, int mods) override;
         void OnKeyPress(int key, int mods) override;
@@ -31,12 +54,14 @@ namespace ed
         void OnWindowResize(int width, int height) override;
 
     protected:
-        implemented::Camera* camera;
-        glm::mat4 projectionMatrix;
+        implemented::Camera* mainCamera;
+        implemented::Camera* staticCamera;
+        std::unordered_map<std::string, Texture2D*> mapTextures;
+        ViewportArea staticViewportArea;
+        glm::ivec2 resolution;
 
         float zNear;
         float zFar;
-
         float fov;
         float aspect;
     };

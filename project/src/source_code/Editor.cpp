@@ -11,60 +11,291 @@ Editor::Editor()
 {
 }
 
-
 Editor::~Editor()
 {
 }
 
-
 void Editor::Init()
 {
-    camera = new implemented::Camera();
-    camera->Set(glm::vec3(0, 1, 3.5f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+    resolution = window->GetResolution();
+    staticViewportArea = ViewportArea(0, 0, resolution.x, resolution.y);
 
-    zNear = 0.01f;
-    zFar = 200.0f;
-
-    fov = RADIANS(60);
-    aspect = window->props.aspectRatio;
-
-    projectionMatrix = glm::perspective(fov, aspect, zNear, zFar);
+    CreateCameras();
+    CreateTextures();
+    CreateObjects();
+    CreateShaders();
 }
-
 
 void Editor::FrameStart()
 {
-    glClearColor(0, 0, 0, 1);
+    glClearColor(0, 0, 0.7f, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glm::ivec2 resolution = window->GetResolution();
-    glViewport(0, 0, resolution.x, resolution.y);
 }
-
 
 void Editor::Update(float deltaTimeSeconds)
 {
+    // RenderMainScene();
+    RenderButtonMenu();
 }
-
 
 void Editor::FrameEnd()
-{
-    projectionMatrix = glm::perspective(fov, aspect, zNear, zFar);
-    DrawCoordinateSystem(camera->GetViewMatrix(), projectionMatrix);
+{    
 }
 
-
-void Editor::RenderMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix)
+void Editor::RenderMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, implemented::Camera* cam)
 {
     if (!mesh || !shader || !shader->program)
         return;
 
+    // Render an object using the specified shader and the specified position
     shader->Use();
-    glUniformMatrix4fv(shader->loc_view_matrix, 1, GL_FALSE, glm::value_ptr(camera->GetViewMatrix()));
-    glUniformMatrix4fv(shader->loc_projection_matrix, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+    glUniformMatrix4fv(shader->loc_view_matrix, 1, GL_FALSE, glm::value_ptr(cam->GetViewMatrix()));
+    glUniformMatrix4fv(shader->loc_projection_matrix, 1, GL_FALSE, glm::value_ptr(cam->projectionMatrix));
     glUniformMatrix4fv(shader->loc_model_matrix, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
     mesh->Render();
+}
+
+void Editor::RenderSimpleMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, Texture2D* texture1, Texture2D* texture2)
+{
+    if (!mesh || !shader || !shader->GetProgramID())
+        return;
+
+    glUseProgram(shader->program);
+
+    GLint loc_model_matrix = glGetUniformLocation(shader->program, "Model");
+    glUniformMatrix4fv(loc_model_matrix, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+
+    glm::mat4 viewMatrix = mainCamera->GetViewMatrix();
+    int loc_view_matrix = glGetUniformLocation(shader->program, "View");
+    glUniformMatrix4fv(loc_view_matrix, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+
+    int loc_projection_matrix = glGetUniformLocation(shader->program, "Projection");
+    glUniformMatrix4fv(loc_projection_matrix, 1, GL_FALSE, glm::value_ptr(mainCamera->projectionMatrix));
+
+    int multipleTextures = 0;
+    if (texture2 != NULL) {
+        multipleTextures = 1;
+    }
+
+    loc_projection_matrix = glGetUniformLocation(shader->program, "multipleTextures");
+    glUniform1i(loc_projection_matrix, multipleTextures);
+
+    if (texture1)
+    {
+        glActiveTexture(GL_TEXTURE0);
+
+        glBindTexture(GL_TEXTURE_2D, texture1->GetTextureID());
+
+        glUniform1i(glGetUniformLocation(shader->program, "texture_1"), 0);
+
+    }
+
+    if (texture2)
+    {
+        glActiveTexture(GL_TEXTURE1);
+
+        glBindTexture(GL_TEXTURE_2D, texture2->GetTextureID());
+
+        glUniform1i(glGetUniformLocation(shader->program, "texture_2"), 1);
+
+    }
+
+    glBindVertexArray(mesh->GetBuffers()->m_VAO);
+    glDrawElements(mesh->GetDrawMode(), static_cast<int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
+}
+
+Texture2D* Editor::CreateTextureColor(unsigned int width, unsigned int height, glm::vec3 color)
+{
+    GLuint textureID = 0;
+    unsigned int channels = 3;
+    unsigned int size = width * height * channels;
+    unsigned char* data = new unsigned char[size];
+
+    for (int i{}; i < size; i += 3) {
+        data[i] = static_cast<int>(color.x * 255);
+        data[i + 1] = static_cast<int>(color.y * 255);
+        data[i + 2] = static_cast<int>(color.z * 255);
+    }
+
+    unsigned int gl_texture_object;
+
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    if (GLEW_EXT_texture_filter_anisotropic) {
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 4);
+    }
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    CheckOpenGLError();
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    CheckOpenGLError();
+
+    Texture2D* texture = new Texture2D();
+    texture->Init(textureID, width, height, channels);
+
+    SAFE_FREE_ARRAY(data);
+    return texture;
+}
+
+Texture2D* Editor::CreateRandomTexture(unsigned int width, unsigned int height)
+{
+    GLuint textureID = 0;
+    unsigned int channels = 3;
+    unsigned int size = width * height * channels;
+    unsigned char* data = new unsigned char[size];
+
+    glm::vec3 color = glm::vec3((rand() % 256), (rand() % 256), (rand() % 256));
+    for (int i{}; i < size; ++i) {
+        data[i] = (float)(rand() % 256);
+    }
+
+    unsigned int gl_texture_object;
+
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    if (GLEW_EXT_texture_filter_anisotropic) {
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 4);
+    }
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    CheckOpenGLError();
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    CheckOpenGLError();
+
+    Texture2D* texture = new Texture2D();
+    texture->Init(textureID, width, height, channels);
+
+    SAFE_FREE_ARRAY(data);
+    return texture;
+}
+
+void ed::Editor::CreateCameras()
+{
+    // Main camera.
+    mainCamera = new implemented::Camera();
+    mainCamera->Set(glm::vec3(0, 1, 3.5f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+    zNear = 0.01f;
+    zFar = 200.0f;
+    fov = RADIANS(60);
+    aspect = window->props.aspectRatio;
+    mainCamera->projectionMatrix = glm::perspective(fov, aspect, zNear, zFar);
+
+    // Static camera.
+    staticCamera = new implemented::Camera();
+    staticCamera->Set(glm::vec3(5, 5, 1), glm::vec3(5, 5, 0), glm::vec3(0, 1, 0));
+    zNear = 0.01f;
+    zFar = 100.0f;
+    float left = 0.0f;
+    float right = resolution.x;
+    float bottom = 0.0f;
+    float top = resolution.y;
+    staticCamera->projectionMatrix = glm::ortho(left, right, bottom, top, zNear, zFar);
+    /*float left = -5.0f;
+    float right =5.0f;
+    float bottom = -50.0f;
+    float top = 50.0f;
+    staticCamera->projectionMatrix = glm::ortho(left, right, bottom, top, zNear, zFar);*/
+}
+
+void ed::Editor::CreateTextures()
+{
+    Texture2D* texture = new Texture2D();
+    texture->Load2D(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::TEXTURES, "crate.jpg").c_str(), GL_REPEAT);
+    mapTextures["crate"] = texture;
+
+    mapTextures["red"] = CreateTextureColor(256, 256, RED);
+
+    mapTextures["cyan"] = CreateTextureColor(256, 256, CYAN);
+
+}
+
+void ed::Editor::CreateObjects()
+{
+    Mesh* mesh;
+
+    mesh = new Mesh("box");
+    mesh->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "primitives"), "box.obj");
+    meshes[mesh->GetMeshID()] = mesh;
+
+    mesh = new Mesh("2DButton");
+    mesh->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "buttons", "2DButton"), "2DButton.fbx");
+    meshes[mesh->GetMeshID()] = mesh;
+
+    mesh = new Mesh("3DButton");
+    mesh->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "buttons", "3DButton"), "3DButton.fbx");
+    meshes[mesh->GetMeshID()] = mesh;
+}
+
+void ed::Editor::CreateShaders()
+{
+    Shader* shader = new Shader("editorShader");
+    shader->AddShader(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::SHADERS, "Editor_Shader", "Editor.Shader.VS.glsl"), GL_VERTEX_SHADER);
+    shader->AddShader(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::SHADERS, "Editor_Shader", "Editor.Shader.FS.glsl"), GL_FRAGMENT_SHADER);
+    shader->CreateAndLink();
+    shaders[shader->GetName()] = shader;
+}
+
+void ed::Editor::RenderMainScene()
+{
+    glViewport(0, 0, resolution.x, resolution.y);
+
+    {
+        glm::mat4 modelMatrix = glm::mat4(1);
+        modelMatrix = glm::translate(modelMatrix, glm::vec3(2, 0.5f, 0));
+        modelMatrix = glm::rotate(modelMatrix, RADIANS(60.0f), glm::vec3(1, 0, 0));
+        modelMatrix = glm::scale(modelMatrix, glm::vec3(0.75f));
+        RenderSimpleMesh(meshes["box"], shaders["editorShader"], modelMatrix, mapTextures["cyan"]);
+    }
+
+    {
+        glm::mat4 modelMatrix = glm::mat4(1);
+        RenderMesh(meshes["2DButton"], shaders["Simple"], modelMatrix, mainCamera);
+    }
+
+    DrawCoordinateSystem(mainCamera->GetViewMatrix(), mainCamera->projectionMatrix);
+}
+
+void ed::Editor::RenderButtonMenu()
+{
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glViewport(staticViewportArea.x, staticViewportArea.y, staticViewportArea.width, staticViewportArea.height);
+
+    {
+        glm::mat4 modelMatrix = glm::mat4(1);
+        modelMatrix = glm::translate(modelMatrix, glm::vec3(350, 625, 0));
+        modelMatrix = glm::scale(modelMatrix, glm::vec3(75));
+        modelMatrix = glm::translate(modelMatrix, glm::vec3(0.5f, 0.5f, 0));
+        RenderMesh(meshes["2DButton"], shaders["Simple"], modelMatrix, staticCamera);
+    }
+
+    {
+        glm::mat4 modelMatrix = glm::mat4(1);
+        modelMatrix = glm::translate(modelMatrix, glm::vec3(425, 625, 0));
+        modelMatrix = glm::scale(modelMatrix, glm::vec3(78));
+        modelMatrix = glm::translate(modelMatrix, glm::vec3(0.5f, 0.5f, 0));
+        RenderMesh(meshes["3DButton"], shaders["Simple"], modelMatrix, staticCamera);
+    }
 }
 
 void Editor::OnInputUpdate(float deltaTime, int mods)
@@ -74,28 +305,28 @@ void Editor::OnInputUpdate(float deltaTime, int mods)
         float cameraSpeed = 2.0f;
 
         if (window->KeyHold(GLFW_KEY_W)) {
-            camera->TranslateForward(cameraSpeed * deltaTime);
+            mainCamera->TranslateForward(cameraSpeed * deltaTime);
 
         }
 
         if (window->KeyHold(GLFW_KEY_A)) {
-            camera->TranslateRight(-cameraSpeed * deltaTime);
+            mainCamera->TranslateRight(-cameraSpeed * deltaTime);
         }
 
         if (window->KeyHold(GLFW_KEY_S)) {
-            camera->TranslateForward(-cameraSpeed * deltaTime);
+            mainCamera->TranslateForward(-cameraSpeed * deltaTime);
         }
 
         if (window->KeyHold(GLFW_KEY_D)) {
-            camera->TranslateRight(cameraSpeed * deltaTime);
+            mainCamera->TranslateRight(cameraSpeed * deltaTime);
         }
 
         if (window->KeyHold(GLFW_KEY_Q)) {
-            camera->TranslateUpward(-cameraSpeed * deltaTime);
+            mainCamera->TranslateUpward(-cameraSpeed * deltaTime);
         }
 
         if (window->KeyHold(GLFW_KEY_E)) {
-            camera->TranslateUpward(cameraSpeed * deltaTime);
+            mainCamera->TranslateUpward(cameraSpeed * deltaTime);
         }
     }
 }
@@ -105,11 +336,9 @@ void Editor::OnKeyPress(int key, int mods)
 {
 }
 
-
 void Editor::OnKeyRelease(int key, int mods)
 {
 }
-
 
 void Editor::OnMouseMove(int mouseX, int mouseY, int deltaX, int deltaY)
 {
@@ -121,27 +350,23 @@ void Editor::OnMouseMove(int mouseX, int mouseY, int deltaX, int deltaY)
         if (window->GetSpecialKeyState() == 0) {
             float angleX = (-deltaX) * sensivityOY;
             float angleY = (-deltaY) * sensivityOX;
-            camera->RotateFirstPerson_OY(angleX);
-            camera->RotateFirstPerson_OX(angleY);
+            mainCamera->RotateFirstPerson_OY(angleX);
+            mainCamera->RotateFirstPerson_OX(angleY);
         }
     }
 }
-
 
 void Editor::OnMouseBtnPress(int mouseX, int mouseY, int button, int mods)
 {
 }
 
-
 void Editor::OnMouseBtnRelease(int mouseX, int mouseY, int button, int mods)
 {
 }
 
-
 void Editor::OnMouseScroll(int mouseX, int mouseY, int offsetX, int offsetY)
 {
 }
-
 
 void Editor::OnWindowResize(int width, int height)
 {
