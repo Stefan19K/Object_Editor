@@ -10,3 +10,6 @@ namespace color {
 	#define CYAN glm::vec3(0, 1, 1)
 	#define MAGENTA glm::vec3(1, 0, 1)
 }
+
+#define FULL_CIRCLE 360
+#define PI 3.1415f

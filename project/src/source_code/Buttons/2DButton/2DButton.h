@@ -6,9 +6,9 @@ class TwoDButton : public Button{
 public:
 	TwoDButton(std::string meshID, 
 		std::string textID, 
-		vec3 t = vec3(0.0f), 
-		vec3 r = vec3(0.0f), 
-		vec3 s = vec3(1.0f)
+		vec3 t,
+		vec3 r,
+		vec3 s
 	) : Button(meshID, textID, t, r, s) {}
 
 	TwoDButton(std::string meshID, 

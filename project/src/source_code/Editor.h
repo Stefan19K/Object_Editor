@@ -35,7 +35,7 @@ namespace ed
         void FrameEnd() override;
 
         void RenderMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, implemented::Camera* cam);
-        void RenderSimpleMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, Texture2D* texture1, Texture2D* texture2 = NULL);
+        void RenderSimpleMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, implemented::Camera* cam, Texture2D* texture1, Texture2D* texture2 = NULL);
         Texture2D* Editor::CreateTextureColor(unsigned int width, unsigned int height, glm::vec3 color);
         Texture2D* CreateRandomTexture(unsigned int width, unsigned int height);
 

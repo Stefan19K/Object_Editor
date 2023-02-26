@@ -14,8 +14,8 @@ void Button::UpdateMatrix()
 	matrix = scale(matrix, scalation);
 
 	/*Here we place the bottom left corner of the button in the
-	bottom left corner of the viewport.*/
-	matrix = translate(matrix, vec3(0.5f, 0.5f, 0));
+	bottom left corner of the viewport.
+	matrix = translate(matrix, vec3(0.5f, 0.5f, 0));*/
 }
 
 mat4 Button::getTransformationMatrix()

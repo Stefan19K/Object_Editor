@@ -19,4 +19,8 @@ void main()
     } else {
         out_color = mix(color1, color2, 0.5f);
     }
+
+    if (out_color.w == 1.0f) {
+        // TODO : discard white border from images;
+    }
 }

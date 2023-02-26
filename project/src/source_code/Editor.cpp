@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include "GeometryShapes.h"
 
 using namespace std;
 using namespace ed;
@@ -57,7 +58,7 @@ void Editor::RenderMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix
     mesh->Render();
 }
 
-void Editor::RenderSimpleMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, Texture2D* texture1, Texture2D* texture2)
+void Editor::RenderSimpleMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, implemented::Camera* cam, Texture2D* texture1, Texture2D* texture2)
 {
     if (!mesh || !shader || !shader->GetProgramID())
         return;
@@ -67,12 +68,12 @@ void Editor::RenderSimpleMesh(Mesh* mesh, Shader* shader, const glm::mat4& model
     GLint loc_model_matrix = glGetUniformLocation(shader->program, "Model");
     glUniformMatrix4fv(loc_model_matrix, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
-    glm::mat4 viewMatrix = mainCamera->GetViewMatrix();
+    glm::mat4 viewMatrix = cam->GetViewMatrix();
     int loc_view_matrix = glGetUniformLocation(shader->program, "View");
     glUniformMatrix4fv(loc_view_matrix, 1, GL_FALSE, glm::value_ptr(viewMatrix));
 
     int loc_projection_matrix = glGetUniformLocation(shader->program, "Projection");
-    glUniformMatrix4fv(loc_projection_matrix, 1, GL_FALSE, glm::value_ptr(mainCamera->projectionMatrix));
+    glUniformMatrix4fv(loc_projection_matrix, 1, GL_FALSE, glm::value_ptr(cam->projectionMatrix));
 
     int multipleTextures = 0;
     if (texture2 != NULL) {
@@ -221,13 +222,22 @@ void ed::Editor::CreateCameras()
 
 void ed::Editor::CreateTextures()
 {
-    Texture2D* texture = new Texture2D();
+    Texture2D* texture;
+    /*Texture2D* texture = new Texture2D();
     texture->Load2D(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::TEXTURES, "crate.jpg").c_str(), GL_REPEAT);
-    mapTextures["crate"] = texture;
+    mapTextures["crate"] = texture;*/
 
     mapTextures["red"] = CreateTextureColor(256, 256, RED);
 
     mapTextures["cyan"] = CreateTextureColor(256, 256, CYAN);
+
+    texture = new Texture2D();
+    texture->Load2D(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::TEXTURES, "2D Button.png").c_str(), GL_REPEAT);
+    mapTextures["2DButton"] = texture;
+
+    texture = new Texture2D();
+    texture->Load2D(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::TEXTURES, "3D Button.png").c_str(), GL_REPEAT);
+    mapTextures["3DButton"] = texture;
 
 }
 
@@ -238,6 +248,9 @@ void ed::Editor::CreateObjects()
     mesh = new Mesh("box");
     mesh->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "primitives"), "box.obj");
     meshes[mesh->GetMeshID()] = mesh;
+
+    mesh = shapes::CreateQuad("quad");
+    AddMeshToList(mesh);
 
     mesh = new Mesh("2DButton");
     mesh->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "buttons", "2DButton"), "2DButton.fbx");
@@ -251,12 +264,12 @@ void ed::Editor::CreateObjects()
 void ed::Editor::CreateButtons()
 {   
     {
-        TwoDButton* button = new TwoDButton("square", "2DButton", vec2(350.0f, 625.0f), vec2(0.0f), vec2(75.0f));
+        TwoDButton* button = new TwoDButton("quad", "2DButton", vec2(350.0f, 650.0f), vec2(0.0f), vec2(75.0f));
         buttons.push_back(button);
     }
     
     {
-        ThreeDButton* button = new ThreeDButton("square", "3DButton", vec2(425.0f, 625.0f), vec2(0.0f), vec2(75.0f));
+        ThreeDButton* button = new ThreeDButton("quad", "3DButton", vec2(455.0f, 650.0f), vec2(0.0f), vec2(75.0f));
         buttons.push_back(button);
     }
 }
@@ -276,16 +289,21 @@ void ed::Editor::RenderMainScene()
 
     {
         glm::mat4 modelMatrix = glm::mat4(1);
-        modelMatrix = glm::translate(modelMatrix, glm::vec3(2, 0.5f, 0));
-        modelMatrix = glm::rotate(modelMatrix, RADIANS(60.0f), glm::vec3(1, 0, 0));
-        modelMatrix = glm::scale(modelMatrix, glm::vec3(0.75f));
-        RenderSimpleMesh(meshes["box"], shaders["editorShader"], modelMatrix, mapTextures["cyan"]);
+        RenderSimpleMesh(meshes["quad"], shaders["editorShader"], modelMatrix, mainCamera, mapTextures["2DButton"]);
     }
 
     {
         glm::mat4 modelMatrix = glm::mat4(1);
-        RenderMesh(meshes["2DButton"], shaders["Simple"], modelMatrix, mainCamera);
+        modelMatrix = glm::translate(modelMatrix, glm::vec3(2, 0.5f, 0));
+        modelMatrix = glm::rotate(modelMatrix, RADIANS(60.0f), glm::vec3(1, 0, 0));
+        modelMatrix = glm::scale(modelMatrix, glm::vec3(0.75f));
+        RenderSimpleMesh(meshes["box"], shaders["editorShader"], modelMatrix, mainCamera, mapTextures["cyan"]);
     }
+
+    /*{
+        glm::mat4 modelMatrix = glm::mat4(1);
+        RenderMesh(meshes["2DButton"], shaders["Simple"], modelMatrix, mainCamera);
+    }*/
 
     DrawCoordinateSystem(mainCamera->GetViewMatrix(), mainCamera->projectionMatrix);
 }
@@ -296,7 +314,14 @@ void ed::Editor::RenderButtonMenu()
     glViewport(staticViewportArea.x, staticViewportArea.y, staticViewportArea.width, staticViewportArea.height);
 
     for (const auto button : buttons) {
-        RenderMesh(meshes[button->GetTextID()], shaders["Simple"], button->getTransformationMatrix(), staticCamera);
+        // RenderMesh(meshes[button->GetTextID()], shaders["Simple"], button->getTransformationMatrix(), staticCamera);
+        RenderSimpleMesh(
+            meshes[button->GetMeshID()],
+            shaders["editorShader"],
+            button->getTransformationMatrix(),
+            staticCamera,
+            mapTextures[button->GetTextID()]
+        );
     }
 }
 
