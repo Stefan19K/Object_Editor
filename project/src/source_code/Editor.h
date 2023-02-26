@@ -3,6 +3,9 @@
 #include "components/simple_scene.h"
 #include "source_code/Camera.h"
 #include "Macros.h"
+#include "Buttons/Button.h"
+#include "Buttons/2DButton/2DButton.h"
+#include "Buttons/3DButton/3DButton.h"
 
 
 namespace ed
@@ -39,6 +42,7 @@ namespace ed
         void CreateCameras();
         void CreateTextures();
         void CreateObjects();
+        void CreateButtons();
         void CreateShaders();
 
         void RenderMainScene();
@@ -57,6 +61,7 @@ namespace ed
         implemented::Camera* mainCamera;
         implemented::Camera* staticCamera;
         std::unordered_map<std::string, Texture2D*> mapTextures;
+        std::vector<Button*> buttons;
         ViewportArea staticViewportArea;
         glm::ivec2 resolution;
 

@@ -23,6 +23,7 @@ void Editor::Init()
     CreateCameras();
     CreateTextures();
     CreateObjects();
+    CreateButtons();
     CreateShaders();
 }
 
@@ -247,6 +248,19 @@ void ed::Editor::CreateObjects()
     meshes[mesh->GetMeshID()] = mesh;
 }
 
+void ed::Editor::CreateButtons()
+{   
+    {
+        TwoDButton* button = new TwoDButton("square", "2DButton", vec2(350.0f, 625.0f), vec2(0.0f), vec2(75.0f));
+        buttons.push_back(button);
+    }
+    
+    {
+        ThreeDButton* button = new ThreeDButton("square", "3DButton", vec2(425.0f, 625.0f), vec2(0.0f), vec2(75.0f));
+        buttons.push_back(button);
+    }
+}
+
 void ed::Editor::CreateShaders()
 {
     Shader* shader = new Shader("editorShader");
@@ -281,20 +295,8 @@ void ed::Editor::RenderButtonMenu()
     glClear(GL_DEPTH_BUFFER_BIT);
     glViewport(staticViewportArea.x, staticViewportArea.y, staticViewportArea.width, staticViewportArea.height);
 
-    {
-        glm::mat4 modelMatrix = glm::mat4(1);
-        modelMatrix = glm::translate(modelMatrix, glm::vec3(350, 625, 0));
-        modelMatrix = glm::scale(modelMatrix, glm::vec3(75));
-        modelMatrix = glm::translate(modelMatrix, glm::vec3(0.5f, 0.5f, 0));
-        RenderMesh(meshes["2DButton"], shaders["Simple"], modelMatrix, staticCamera);
-    }
-
-    {
-        glm::mat4 modelMatrix = glm::mat4(1);
-        modelMatrix = glm::translate(modelMatrix, glm::vec3(425, 625, 0));
-        modelMatrix = glm::scale(modelMatrix, glm::vec3(78));
-        modelMatrix = glm::translate(modelMatrix, glm::vec3(0.5f, 0.5f, 0));
-        RenderMesh(meshes["3DButton"], shaders["Simple"], modelMatrix, staticCamera);
+    for (const auto button : buttons) {
+        RenderMesh(meshes[button->GetTextID()], shaders["Simple"], button->getTransformationMatrix(), staticCamera);
     }
 }
 
