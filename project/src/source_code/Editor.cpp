@@ -424,8 +424,14 @@ void Editor::OnMouseScroll(int mouseX, int mouseY, int offsetX, int offsetY)
 
 void Editor::OnWindowResize(int width, int height)
 {
+    float newX {width / (float)resolution.x};
+    float newY {height / (float)resolution.y};
     resolution.x = width;
     resolution.y = height;
     staticViewportArea.width = width;
     staticViewportArea.height = height;
+
+    for (const auto button : buttons) {
+        button->Resize(newX, newY);
+    }
 }

@@ -4,6 +4,12 @@ void Button::ButtonPressed() const
 {
 }
 
+void Button::Resize(float newX, float newY)
+{
+	translation = vec3(translation.x * newX, translation.y * newY, 0.0f);
+	scalation = vec3(scalation.x * newX, scalation.y * newY, 1.0f);
+}
+
 void Button::UpdateMatrix()
 {
 	matrix = mat4(1.0f);

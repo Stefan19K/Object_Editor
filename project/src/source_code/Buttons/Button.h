@@ -41,6 +41,7 @@ public:
 
 	virtual void ButtonPressed() const;
 
+	void Resize(float newX, float newY);
 	void UpdateMatrix();
 	mat4 getTransformationMatrix();
 
