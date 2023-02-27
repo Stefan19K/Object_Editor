@@ -43,6 +43,10 @@ public:
 
 	void UpdateMatrix();
 	mat4 getTransformationMatrix();
+
+	bool isHovered(const float x, const float y);
+
+	// Getters.
 	std::string GetMeshID();
 	std::string GetTextID();
 };

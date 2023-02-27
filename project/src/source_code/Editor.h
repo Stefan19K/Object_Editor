@@ -69,5 +69,7 @@ namespace ed
         float zFar;
         float fov;
         float aspect;
+
+        int hovButIndex;
     };
 }

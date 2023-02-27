@@ -10,6 +10,7 @@ using namespace ed;
 
 Editor::Editor()
 {
+    hovButIndex = -1;
 }
 
 Editor::~Editor()
@@ -18,7 +19,7 @@ Editor::~Editor()
 
 void Editor::Init()
 {
-    resolution = window->GetResolution();
+    resolution = window->GetResolution();         // initial 1280 x 720.
     staticViewportArea = ViewportArea(0, 0, resolution.x, resolution.y);
 
     CreateCameras();
@@ -231,6 +232,8 @@ void ed::Editor::CreateTextures()
 
     mapTextures["cyan"] = CreateTextureColor(256, 256, CYAN);
 
+    mapTextures["white"] = CreateTextureColor(256, 256, WHITE);
+
     texture = new Texture2D();
     texture->Load2D(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::TEXTURES, "2D Button.png").c_str(), GL_REPEAT);
     mapTextures["2DButton"] = texture;
@@ -264,12 +267,12 @@ void ed::Editor::CreateObjects()
 void ed::Editor::CreateButtons()
 {   
     {
-        TwoDButton* button = new TwoDButton("quad", "2DButton", vec2(350.0f, 650.0f), vec2(0.0f), vec2(75.0f));
+        TwoDButton* button = new TwoDButton("quad", "2DButton", vec2(350.0f, 695.0f), vec2(0.0f), vec2(50.0f));
         buttons.push_back(button);
     }
     
     {
-        ThreeDButton* button = new ThreeDButton("quad", "3DButton", vec2(455.0f, 650.0f), vec2(0.0f), vec2(75.0f));
+        ThreeDButton* button = new ThreeDButton("quad", "3DButton", vec2(410.0f, 695.0f), vec2(0.0f), vec2(50.0f));
         buttons.push_back(button);
     }
 }
@@ -313,15 +316,27 @@ void ed::Editor::RenderButtonMenu()
     glClear(GL_DEPTH_BUFFER_BIT);
     glViewport(staticViewportArea.x, staticViewportArea.y, staticViewportArea.width, staticViewportArea.height);
 
-    for (const auto button : buttons) {
+    for (int i {}; i < buttons.size(); ++i) {
         // RenderMesh(meshes[button->GetTextID()], shaders["Simple"], button->getTransformationMatrix(), staticCamera);
-        RenderSimpleMesh(
-            meshes[button->GetMeshID()],
-            shaders["editorShader"],
-            button->getTransformationMatrix(),
-            staticCamera,
-            mapTextures[button->GetTextID()]
-        );
+        if (i != hovButIndex) {
+            RenderSimpleMesh(
+                meshes[buttons[i]->GetMeshID()],
+                shaders["editorShader"],
+                buttons[i]->getTransformationMatrix(),
+                staticCamera,
+                mapTextures[buttons[i]->GetTextID()]
+            );
+        }
+        else {
+            RenderSimpleMesh(
+                meshes[buttons[i]->GetMeshID()],
+                shaders["editorShader"],
+                buttons[i]->getTransformationMatrix(),
+                staticCamera,
+                mapTextures[buttons[i]->GetTextID()],
+                mapTextures["white"]
+            );
+        }
     }
 }
 
@@ -381,6 +396,18 @@ void Editor::OnMouseMove(int mouseX, int mouseY, int deltaX, int deltaY)
             mainCamera->RotateFirstPerson_OX(angleY);
         }
     }
+
+    // Check if the mouse is hovering over a button.
+    bool hovered{ false };
+    for (int i{}; i < buttons.size(); ++i) {
+        if (buttons[i]->isHovered(mouseX, resolution.y - mouseY)) {
+            hovButIndex = i;
+            hovered = true;
+        }
+    }
+
+    if (!hovered)
+        hovButIndex = -1;
 }
 
 void Editor::OnMouseBtnPress(int mouseX, int mouseY, int button, int mods)
@@ -397,4 +424,8 @@ void Editor::OnMouseScroll(int mouseX, int mouseY, int offsetX, int offsetY)
 
 void Editor::OnWindowResize(int width, int height)
 {
+    resolution.x = width;
+    resolution.y = height;
+    staticViewportArea.width = width;
+    staticViewportArea.height = height;
 }
