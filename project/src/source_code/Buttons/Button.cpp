@@ -38,13 +38,66 @@ bool Button::isHovered(const float x, const float y)
 	return false;
 }
 
-std::string Button::GetMeshID()
+void Button::RenderButton(Shader* shader, implemented::Camera* cam, Texture2D* texture2)
+{
+    RenderSimpleMesh(this->meshID, shader, this->matrix, cam, this->textID, texture2);
+}
+
+Mesh* Button::GetMeshID()
 {
 	return meshID;
 }
 
-std::string Button::GetTextID()
+Texture2D*  Button::GetTextID()
 {
 	return textID;
 }
 
+void RenderSimpleMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, implemented::Camera* cam, Texture2D* texture1, Texture2D* texture2)
+{
+    if (!mesh || !shader || !shader->GetProgramID())
+        return;
+
+    glUseProgram(shader->program);
+
+    GLint loc_model_matrix = glGetUniformLocation(shader->program, "Model");
+    glUniformMatrix4fv(loc_model_matrix, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+
+    glm::mat4 viewMatrix = cam->GetViewMatrix();
+    int loc_view_matrix = glGetUniformLocation(shader->program, "View");
+    glUniformMatrix4fv(loc_view_matrix, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+
+    int loc_projection_matrix = glGetUniformLocation(shader->program, "Projection");
+    glUniformMatrix4fv(loc_projection_matrix, 1, GL_FALSE, glm::value_ptr(cam->projectionMatrix));
+
+    int multipleTextures = 0;
+    if (texture2 != NULL) {
+        multipleTextures = 1;
+    }
+
+    loc_projection_matrix = glGetUniformLocation(shader->program, "multipleTextures");
+    glUniform1i(loc_projection_matrix, multipleTextures);
+
+    if (texture1)
+    {
+        glActiveTexture(GL_TEXTURE0);
+
+        glBindTexture(GL_TEXTURE_2D, texture1->GetTextureID());
+
+        glUniform1i(glGetUniformLocation(shader->program, "texture_1"), 0);
+
+    }
+
+    if (texture2)
+    {
+        glActiveTexture(GL_TEXTURE1);
+
+        glBindTexture(GL_TEXTURE_2D, texture2->GetTextureID());
+
+        glUniform1i(glGetUniformLocation(shader->program, "texture_2"), 1);
+
+    }
+
+    glBindVertexArray(mesh->GetBuffers()->m_VAO);
+    glDrawElements(mesh->GetDrawMode(), static_cast<int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
+}

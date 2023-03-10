@@ -4,19 +4,23 @@
 
 class ThreeDButton : public Button {
 public:
-	ThreeDButton(std::string meshID,
-		std::string textID,
+	ThreeDButton(
+		Mesh* meshID, 
+		Texture2D* textID,
 		vec3 t,
 		vec3 r,
 		vec3 s
-	) : Button(meshID, textID, t, r, s) {}
+	) : Button(meshID, textID, t, r, s) {
+	}
 
-	ThreeDButton(std::string meshID,
-		std::string textID,
+	ThreeDButton(
+		Mesh* meshID, 
+		Texture2D* textID,
 		vec2 t = vec2(0.0f),
 		vec2 r = vec2(0.0f),
 		vec2 s = vec2(1.0f)
-	) : Button(meshID, textID, t, r, s) {}
+	) : Button(meshID, textID, t, r, s) {
+	}
 
 	virtual void ButtonPressed() const;
 };

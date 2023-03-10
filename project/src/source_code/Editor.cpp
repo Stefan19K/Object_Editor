@@ -11,6 +11,7 @@ using namespace ed;
 Editor::Editor()
 {
     hovButIndex = -1;
+    presButIndex = -1;
 }
 
 Editor::~Editor()
@@ -31,7 +32,7 @@ void Editor::Init()
 
 void Editor::FrameStart()
 {
-    glClearColor(0, 0, 0.7f, 1);
+    glClearColor(0.3f, 0.3f, 0.3f, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
@@ -59,54 +60,54 @@ void Editor::RenderMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix
     mesh->Render();
 }
 
-void Editor::RenderSimpleMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, implemented::Camera* cam, Texture2D* texture1, Texture2D* texture2)
-{
-    if (!mesh || !shader || !shader->GetProgramID())
-        return;
-
-    glUseProgram(shader->program);
-
-    GLint loc_model_matrix = glGetUniformLocation(shader->program, "Model");
-    glUniformMatrix4fv(loc_model_matrix, 1, GL_FALSE, glm::value_ptr(modelMatrix));
-
-    glm::mat4 viewMatrix = cam->GetViewMatrix();
-    int loc_view_matrix = glGetUniformLocation(shader->program, "View");
-    glUniformMatrix4fv(loc_view_matrix, 1, GL_FALSE, glm::value_ptr(viewMatrix));
-
-    int loc_projection_matrix = glGetUniformLocation(shader->program, "Projection");
-    glUniformMatrix4fv(loc_projection_matrix, 1, GL_FALSE, glm::value_ptr(cam->projectionMatrix));
-
-    int multipleTextures = 0;
-    if (texture2 != NULL) {
-        multipleTextures = 1;
-    }
-
-    loc_projection_matrix = glGetUniformLocation(shader->program, "multipleTextures");
-    glUniform1i(loc_projection_matrix, multipleTextures);
-
-    if (texture1)
-    {
-        glActiveTexture(GL_TEXTURE0);
-
-        glBindTexture(GL_TEXTURE_2D, texture1->GetTextureID());
-
-        glUniform1i(glGetUniformLocation(shader->program, "texture_1"), 0);
-
-    }
-
-    if (texture2)
-    {
-        glActiveTexture(GL_TEXTURE1);
-
-        glBindTexture(GL_TEXTURE_2D, texture2->GetTextureID());
-
-        glUniform1i(glGetUniformLocation(shader->program, "texture_2"), 1);
-
-    }
-
-    glBindVertexArray(mesh->GetBuffers()->m_VAO);
-    glDrawElements(mesh->GetDrawMode(), static_cast<int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
-}
+//void Editor::RenderSimpleMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, implemented::Camera* cam, Texture2D* texture1, Texture2D* texture2)
+//{
+//    if (!mesh || !shader || !shader->GetProgramID())
+//        return;
+//
+//    glUseProgram(shader->program);
+//
+//    GLint loc_model_matrix = glGetUniformLocation(shader->program, "Model");
+//    glUniformMatrix4fv(loc_model_matrix, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+//
+//    glm::mat4 viewMatrix = cam->GetViewMatrix();
+//    int loc_view_matrix = glGetUniformLocation(shader->program, "View");
+//    glUniformMatrix4fv(loc_view_matrix, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+//
+//    int loc_projection_matrix = glGetUniformLocation(shader->program, "Projection");
+//    glUniformMatrix4fv(loc_projection_matrix, 1, GL_FALSE, glm::value_ptr(cam->projectionMatrix));
+//
+//    int multipleTextures = 0;
+//    if (texture2 != NULL) {
+//        multipleTextures = 1;
+//    }
+//
+//    loc_projection_matrix = glGetUniformLocation(shader->program, "multipleTextures");
+//    glUniform1i(loc_projection_matrix, multipleTextures);
+//
+//    if (texture1)
+//    {
+//        glActiveTexture(GL_TEXTURE0);
+//
+//        glBindTexture(GL_TEXTURE_2D, texture1->GetTextureID());
+//
+//        glUniform1i(glGetUniformLocation(shader->program, "texture_1"), 0);
+//
+//    }
+//
+//    if (texture2)
+//    {
+//        glActiveTexture(GL_TEXTURE1);
+//
+//        glBindTexture(GL_TEXTURE_2D, texture2->GetTextureID());
+//
+//        glUniform1i(glGetUniformLocation(shader->program, "texture_2"), 1);
+//
+//    }
+//
+//    glBindVertexArray(mesh->GetBuffers()->m_VAO);
+//    glDrawElements(mesh->GetDrawMode(), static_cast<int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
+//}
 
 Texture2D* Editor::CreateTextureColor(unsigned int width, unsigned int height, glm::vec3 color)
 {
@@ -234,6 +235,8 @@ void ed::Editor::CreateTextures()
 
     mapTextures["white"] = CreateTextureColor(256, 256, WHITE);
 
+    mapTextures["background"] = CreateTextureColor(256, 256, vec3(0.2f));
+
     texture = new Texture2D();
     texture->Load2D(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::TEXTURES, "2D Button.png").c_str(), GL_REPEAT);
     mapTextures["2DButton"] = texture;
@@ -241,6 +244,14 @@ void ed::Editor::CreateTextures()
     texture = new Texture2D();
     texture->Load2D(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::TEXTURES, "3D Button.png").c_str(), GL_REPEAT);
     mapTextures["3DButton"] = texture;
+
+    texture = new Texture2D();
+    texture->Load2D(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::TEXTURES, "Arrow Button.png").c_str(), GL_REPEAT);
+    mapTextures["ArrowButton"] = texture;
+
+    texture = new Texture2D();
+    texture->Load2D(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::TEXTURES, "Menu Button.png").c_str(), GL_REPEAT);
+    mapTextures["MenuButton"] = texture;
 
 }
 
@@ -267,12 +278,12 @@ void ed::Editor::CreateObjects()
 void ed::Editor::CreateButtons()
 {   
     {
-        TwoDButton* button = new TwoDButton("quad", "2DButton", vec2(350.0f, 695.0f), vec2(0.0f), vec2(50.0f));
+        TwoDButton* button = new TwoDButton(meshes["quad"], mapTextures["2DButton"], vec2(35.0f, 695.0f), vec2(0.0f), vec2(50.0f));
         buttons.push_back(button);
     }
     
     {
-        ThreeDButton* button = new ThreeDButton("quad", "3DButton", vec2(410.0f, 695.0f), vec2(0.0f), vec2(50.0f));
+        ThreeDButton* button = new ThreeDButton(meshes["quad"], mapTextures["3DButton"], vec2(95.0f, 695.0f), vec2(0.0f), vec2(50.0f));
         buttons.push_back(button);
     }
 }
@@ -316,24 +327,19 @@ void ed::Editor::RenderButtonMenu()
     glClear(GL_DEPTH_BUFFER_BIT);
     glViewport(staticViewportArea.x, staticViewportArea.y, staticViewportArea.width, staticViewportArea.height);
 
+    // Render buttons.
     for (int i {}; i < buttons.size(); ++i) {
         // RenderMesh(meshes[button->GetTextID()], shaders["Simple"], button->getTransformationMatrix(), staticCamera);
         if (i != hovButIndex) {
-            RenderSimpleMesh(
-                meshes[buttons[i]->GetMeshID()],
+            buttons[i]->RenderButton(
                 shaders["editorShader"],
-                buttons[i]->getTransformationMatrix(),
-                staticCamera,
-                mapTextures[buttons[i]->GetTextID()]
+                staticCamera
             );
         }
         else {
-            RenderSimpleMesh(
-                meshes[buttons[i]->GetMeshID()],
+            buttons[i]->RenderButton(
                 shaders["editorShader"],
-                buttons[i]->getTransformationMatrix(),
                 staticCamera,
-                mapTextures[buttons[i]->GetTextID()],
                 mapTextures["white"]
             );
         }
@@ -412,6 +418,18 @@ void Editor::OnMouseMove(int mouseX, int mouseY, int deltaX, int deltaY)
 
 void Editor::OnMouseBtnPress(int mouseX, int mouseY, int button, int mods)
 {
+    if (hovButIndex != -1) {
+        /*buttons[hovButIndex]->ButtonPressed();
+        if (buttons[hovButIndex]->menuBtn->hidden == false) {
+            RenderSimpleMesh(
+                meshes[buttons[hovButIndex]->menuBtn->GetMeshID()],
+                shaders["editorShader"],
+                buttons[hovButIndex]->menuBtn->getTransformationMatrix(),
+                staticCamera,
+                mapTextures[(buttons[hovButIndex])->menuBtn->GetTextID()]
+            );
+        }*/
+    }
 }
 
 void Editor::OnMouseBtnRelease(int mouseX, int mouseY, int button, int mods)

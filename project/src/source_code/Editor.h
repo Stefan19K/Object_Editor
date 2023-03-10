@@ -1,7 +1,6 @@
 #pragma once
 
 #include "components/simple_scene.h"
-#include "source_code/Camera.h"
 #include "Macros.h"
 #include "Buttons/Button.h"
 #include "Buttons/2DButton/2DButton.h"
@@ -35,7 +34,7 @@ namespace ed
         void FrameEnd() override;
 
         void RenderMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, implemented::Camera* cam);
-        void RenderSimpleMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, implemented::Camera* cam, Texture2D* texture1, Texture2D* texture2 = NULL);
+        // void RenderSimpleMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, implemented::Camera* cam, Texture2D* texture1, Texture2D* texture2 = NULL);
         Texture2D* Editor::CreateTextureColor(unsigned int width, unsigned int height, glm::vec3 color);
         Texture2D* CreateRandomTexture(unsigned int width, unsigned int height);
 
@@ -71,5 +70,6 @@ namespace ed
         float aspect;
 
         int hovButIndex;
+        int presButIndex;
     };
 }
