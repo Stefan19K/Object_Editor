@@ -6,21 +6,27 @@
 class TwoDButton : public Button{
 public:
 	TwoDButton(
-		Mesh* meshID, 
-		Texture2D* textID,
+		Mesh* meshID,
+		Shader* shader,
+		Camera* cam,
+		Texture2D* text1,
+		Texture2D* text2,
 		vec3 t,
 		vec3 r,
 		vec3 s
-	) : Button(meshID, textID, t, r, s) {
+	) : Button(meshID, shader, cam, text1, text2, t, r, s) {
 	}
 
 	TwoDButton(
 		Mesh* meshID,
-		Texture2D* textID,
+		Shader* shader,
+		Camera* cam,
+		Texture2D* text1,
+		Texture2D* text2,
 		vec2 t = vec2(0.0f), 
 		vec2 r = vec2(0.0f), 
 		vec2 s = vec2(1.0f)
-	) : Button(meshID, textID, t, r, s) {
+	) : Button(meshID, shader, cam, text1, text2, t, r, s) {
 	}
 
 	virtual void ButtonPressed() const;

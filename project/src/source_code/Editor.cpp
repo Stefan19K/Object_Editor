@@ -26,8 +26,8 @@ void Editor::Init()
     CreateCameras();
     CreateTextures();
     CreateObjects();
-    CreateButtons();
     CreateShaders();
+    CreateButtons();
 }
 
 void Editor::FrameStart()
@@ -278,12 +278,12 @@ void ed::Editor::CreateObjects()
 void ed::Editor::CreateButtons()
 {   
     {
-        TwoDButton* button = new TwoDButton(meshes["quad"], mapTextures["2DButton"], vec2(35.0f, 695.0f), vec2(0.0f), vec2(50.0f));
+        TwoDButton* button = new TwoDButton(meshes["quad"], shaders["editorShader"], staticCamera, mapTextures["2DButton"], NULL, vec2(35.0f, 695.0f), vec2(0.0f), vec2(50.0f));
         buttons.push_back(button);
     }
     
     {
-        ThreeDButton* button = new ThreeDButton(meshes["quad"], mapTextures["3DButton"], vec2(95.0f, 695.0f), vec2(0.0f), vec2(50.0f));
+        ThreeDButton* button = new ThreeDButton(meshes["quad"], shaders["editorShader"], staticCamera, mapTextures["3DButton"], NULL, vec2(95.0f, 695.0f), vec2(0.0f), vec2(50.0f));
         buttons.push_back(button);
     }
 }
@@ -331,17 +331,10 @@ void ed::Editor::RenderButtonMenu()
     for (int i {}; i < buttons.size(); ++i) {
         // RenderMesh(meshes[button->GetTextID()], shaders["Simple"], button->getTransformationMatrix(), staticCamera);
         if (i != hovButIndex) {
-            buttons[i]->RenderButton(
-                shaders["editorShader"],
-                staticCamera
-            );
+            buttons[i]->RenderButton();
         }
         else {
-            buttons[i]->RenderButton(
-                shaders["editorShader"],
-                staticCamera,
-                mapTextures["white"]
-            );
+            buttons[i]->RenderButton(mapTextures["white"]);
         }
     }
 }
