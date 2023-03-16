@@ -28,6 +28,8 @@ void Editor::Init()
     CreateObjects();
     CreateShaders();
     CreateButtons();
+
+    mainCamera = Globals::GetMainCamera();
 }
 
 void Editor::FrameStart()
@@ -197,6 +199,7 @@ Texture2D* Editor::CreateRandomTexture(unsigned int width, unsigned int height)
 void ed::Editor::CreateCameras()
 {
     // Main camera.
+    implemented::Camera* mainCamera;
     mainCamera = new implemented::Camera();
     mainCamera->Set(glm::vec3(0, 1, 3.5f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
     zNear = 0.01f;
@@ -204,8 +207,10 @@ void ed::Editor::CreateCameras()
     fov = RADIANS(60);
     aspect = window->props.aspectRatio;
     mainCamera->projectionMatrix = glm::perspective(fov, aspect, zNear, zFar);
+    Globals::SetMainCamera(mainCamera);
 
     // Static camera.
+    implemented::Camera* staticCamera;
     staticCamera = new implemented::Camera();
     staticCamera->Set(glm::vec3(5, 5, 1), glm::vec3(5, 5, 0), glm::vec3(0, 1, 0));
     zNear = 0.01f;
@@ -215,6 +220,7 @@ void ed::Editor::CreateCameras()
     float bottom = 0.0f;
     float top = resolution.y;
     staticCamera->projectionMatrix = glm::ortho(left, right, bottom, top, zNear, zFar);
+    Globals::SetStaticCamera(staticCamera);
     /*float left = -5.0f;
     float right =5.0f;
     float bottom = -50.0f;
@@ -229,30 +235,29 @@ void ed::Editor::CreateTextures()
     texture->Load2D(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::TEXTURES, "crate.jpg").c_str(), GL_REPEAT);
     mapTextures["crate"] = texture;*/
 
-    mapTextures["red"] = CreateTextureColor(256, 256, RED);
+    Globals::AddTexture("red", CreateTextureColor(256, 256, RED));
 
-    mapTextures["cyan"] = CreateTextureColor(256, 256, CYAN);
+    Globals::AddTexture("cyan", CreateTextureColor(256, 256, CYAN));
 
-    mapTextures["white"] = CreateTextureColor(256, 256, WHITE);
+    Globals::AddTexture("white", CreateTextureColor(256, 256, WHITE));
 
-    mapTextures["background"] = CreateTextureColor(256, 256, vec3(0.2f));
+    Globals::AddTexture("background", CreateTextureColor(256, 256, vec3(0.2f)));
 
     texture = new Texture2D();
     texture->Load2D(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::TEXTURES, "2D Button.png").c_str(), GL_REPEAT);
-    mapTextures["2DButton"] = texture;
+    Globals::AddTexture("2DButton", texture);
 
     texture = new Texture2D();
     texture->Load2D(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::TEXTURES, "3D Button.png").c_str(), GL_REPEAT);
-    mapTextures["3DButton"] = texture;
+    Globals::AddTexture("3DButton", texture);
 
     texture = new Texture2D();
     texture->Load2D(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::TEXTURES, "Arrow Button.png").c_str(), GL_REPEAT);
-    mapTextures["ArrowButton"] = texture;
+    Globals::AddTexture("ArrowButton", texture);
 
     texture = new Texture2D();
     texture->Load2D(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::TEXTURES, "Menu Button.png").c_str(), GL_REPEAT);
-    mapTextures["MenuButton"] = texture;
-
+    Globals::AddTexture("MenuButton", texture);
 }
 
 void ed::Editor::CreateObjects()
@@ -261,29 +266,29 @@ void ed::Editor::CreateObjects()
 
     mesh = new Mesh("box");
     mesh->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "primitives"), "box.obj");
-    meshes[mesh->GetMeshID()] = mesh;
+    Globals::AddMesh(mesh);
 
     mesh = shapes::CreateQuad("quad");
-    AddMeshToList(mesh);
+    Globals::AddMesh(mesh);
 
-    mesh = new Mesh("2DButton");
+    /*mesh = new Mesh("2DButton");
     mesh->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "buttons", "2DButton"), "2DButton.fbx");
     meshes[mesh->GetMeshID()] = mesh;
 
     mesh = new Mesh("3DButton");
     mesh->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "buttons", "3DButton"), "3DButton.fbx");
-    meshes[mesh->GetMeshID()] = mesh;
+    meshes[mesh->GetMeshID()] = mesh;*/
 }
 
 void ed::Editor::CreateButtons()
 {   
     {
-        TwoDButton* button = new TwoDButton(meshes["quad"], shaders["editorShader"], staticCamera, mapTextures["2DButton"], NULL, vec2(35.0f, 695.0f), vec2(0.0f), vec2(50.0f));
+        TwoDButton* button = new TwoDButton("quad", "editorShader", "2DButton", vec2(35.0f, 695.0f), vec2(0.0f), vec2(50.0f));
         buttons.push_back(button);
     }
     
     {
-        ThreeDButton* button = new ThreeDButton(meshes["quad"], shaders["editorShader"], staticCamera, mapTextures["3DButton"], NULL, vec2(95.0f, 695.0f), vec2(0.0f), vec2(50.0f));
+        ThreeDButton* button = new ThreeDButton("quad", "editorShader", "3DButton", vec2(95.0f, 695.0f), vec2(0.0f), vec2(50.0f));
         buttons.push_back(button);
     }
 }
@@ -294,7 +299,7 @@ void ed::Editor::CreateShaders()
     shader->AddShader(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::SHADERS, "Editor_Shader", "Editor.Shader.VS.glsl"), GL_VERTEX_SHADER);
     shader->AddShader(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::SHADERS, "Editor_Shader", "Editor.Shader.FS.glsl"), GL_FRAGMENT_SHADER);
     shader->CreateAndLink();
-    shaders[shader->GetName()] = shader;
+    Globals::AddShader(shader);
 }
 
 void ed::Editor::RenderMainScene()
@@ -303,7 +308,7 @@ void ed::Editor::RenderMainScene()
 
     {
         glm::mat4 modelMatrix = glm::mat4(1);
-        RenderSimpleMesh(meshes["quad"], shaders["editorShader"], modelMatrix, mainCamera, mapTextures["2DButton"]);
+        RenderSimpleMesh(Globals::GetMeshes("quad"), Globals::GetShaders("editorShader"), modelMatrix, mainCamera, Globals::GetTextures("2DButton"));
     }
 
     {
@@ -311,7 +316,7 @@ void ed::Editor::RenderMainScene()
         modelMatrix = glm::translate(modelMatrix, glm::vec3(2, 0.5f, 0));
         modelMatrix = glm::rotate(modelMatrix, RADIANS(60.0f), glm::vec3(1, 0, 0));
         modelMatrix = glm::scale(modelMatrix, glm::vec3(0.75f));
-        RenderSimpleMesh(meshes["box"], shaders["editorShader"], modelMatrix, mainCamera, mapTextures["cyan"]);
+        RenderSimpleMesh(Globals::GetMeshes("box"), Globals::GetShaders("editorShader"), modelMatrix, mainCamera, Globals::GetTextures("cyan"));
     }
 
     /*{
@@ -334,7 +339,7 @@ void ed::Editor::RenderButtonMenu()
             buttons[i]->RenderButton();
         }
         else {
-            buttons[i]->RenderButton(mapTextures["white"]);
+            buttons[i]->RenderButton(Globals::GetTextures("white"));
         }
     }
 }
@@ -412,16 +417,8 @@ void Editor::OnMouseMove(int mouseX, int mouseY, int deltaX, int deltaY)
 void Editor::OnMouseBtnPress(int mouseX, int mouseY, int button, int mods)
 {
     if (hovButIndex != -1) {
-        /*buttons[hovButIndex]->ButtonPressed();
-        if (buttons[hovButIndex]->menuBtn->hidden == false) {
-            RenderSimpleMesh(
-                meshes[buttons[hovButIndex]->menuBtn->GetMeshID()],
-                shaders["editorShader"],
-                buttons[hovButIndex]->menuBtn->getTransformationMatrix(),
-                staticCamera,
-                mapTextures[(buttons[hovButIndex])->menuBtn->GetTextID()]
-            );
-        }*/
+        presButIndex = hovButIndex;
+        buttons[presButIndex]->ButtonPressed();
     }
 }
 

@@ -5,6 +5,7 @@
 #include "Buttons/Button.h"
 #include "Buttons/2DButton/2DButton.h"
 #include "Buttons/3DButton/3DButton.h"
+#include "Globals.h";
 
 
 namespace ed
@@ -57,12 +58,11 @@ namespace ed
         void OnWindowResize(int width, int height) override;
 
     protected:
-        implemented::Camera* mainCamera;
-        implemented::Camera* staticCamera;
-        std::unordered_map<std::string, Texture2D*> mapTextures;
+        
         std::vector<Button*> buttons;
         ViewportArea staticViewportArea;
         glm::ivec2 resolution;
+        implemented::Camera* mainCamera;
 
         float zNear;
         float zFar;

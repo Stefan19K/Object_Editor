@@ -40,17 +40,29 @@ bool Button::isHovered(const float x, const float y)
 
 void Button::RenderButton(Texture2D* texture2)
 {
-    RenderSimpleMesh(this->meshID, this->shader, this->matrix, this->cam, this->text1, texture2);
+    RenderSimpleMesh(
+        Globals::GetMeshes(this->meshID),
+        Globals::GetShaders(this->shaderID), 
+        this->matrix, 
+        Globals::GetStaticCamera(),
+        Globals::GetTextures(this->textureID),
+        texture2
+    );
 }
 
-Mesh* Button::GetMeshID()
+string Button::GetMeshID()
 {
 	return meshID;
 }
 
-Texture2D* Button::GetTextID()
+string Button::GetTextID()
 {
-	return text1;
+	return textureID;
+}
+
+string Button::GetShaderID()
+{
+    return shaderID;
 }
 
 void RenderSimpleMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, implemented::Camera* cam, Texture2D* texture1, Texture2D* texture2)
